@@ -1,0 +1,38 @@
+{
+  "movieId": 80192098,
+  "textTracks": [
+    {
+      "id": "track-en",
+      "language": "en",
+      "languageDescription": "English",
+      "isForcedNarrative": false,
+      "isNoneTrack": false,
+      "rawTrackType": "subtitles",
+      "downloadables": {
+        "webvtt-lssdh-ios8": { "urls": [{ "url": "https://example.com/en.vtt" }] }
+      }
+    },
+    {
+      "id": "track-it",
+      "language": "it",
+      "languageDescription": "Italian",
+      "isForcedNarrative": false,
+      "isNoneTrack": false,
+      "rawTrackType": "subtitles",
+      "downloadables": {
+        "webvtt-lssdh-ios8": { "urls": [{ "url": "https://example.com/it.vtt" }] }
+      }
+    },
+    {
+      "id": "track-ptbr",
+      "language": "pt-BR",
+      "languageDescription": "Portuguese (Brazil)",
+      "isForcedNarrative": false,
+      "isNoneTrack": false,
+      "rawTrackType": "subtitles",
+      "downloadables": {
+        "webvtt-lssdh-ios8": { "urls": [{ "url": "https://example.com/pt-br.vtt" }] }
+      }
+    }
+  ]
+}
