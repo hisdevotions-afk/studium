@@ -20,8 +20,14 @@ function ensureContainer(id: string): HTMLElement {
 }
 
 let currentVideoId: number | null = null;
+let activeTrackElements: HTMLTrackElement[] = [];
 
 function handleTracks(rawTracks: RawNetflixTrack[]): void {
+  for (const trackElem of activeTrackElements) {
+    trackElem.remove();
+  }
+  activeTrackElements = [];
+
   const overlayContainer = ensureContainer(OVERLAY_CONTAINER_ID);
   const popupContainer = ensureContainer(POPUP_CONTAINER_ID);
 
@@ -44,25 +50,29 @@ function handleTracks(rawTracks: RawNetflixTrack[]): void {
   const nativeLine = document.createElement('div');
   overlayContainer.append(targetLine, nativeLine);
 
-  attachCueListener(video, target, (cueText, startTime) => {
-    renderOverlayLine(targetLine, cueText, (token, sentence) => {
-      if (currentVideoId === null) return;
-      const payload: LookupPayload = {
-        videoId: currentVideoId,
-        timestampBucket: startTime,
-        sentence,
-        clickedSpan: token,
-        targetLang: target.language.toLowerCase().startsWith('it') ? 'it' : 'en',
-        nativeLang: 'pt-BR',
-      };
-      void handleWordClick(video, popupContainer, payload);
-    });
-  });
+  activeTrackElements.push(
+    attachCueListener(video, target, (cueText, startTime) => {
+      renderOverlayLine(targetLine, cueText, (token, sentence) => {
+        if (currentVideoId === null) return;
+        const payload: LookupPayload = {
+          videoId: currentVideoId,
+          timestampBucket: startTime,
+          sentence,
+          clickedSpan: token,
+          targetLang: target.language.toLowerCase().startsWith('it') ? 'it' : 'en',
+          nativeLang: 'pt-BR',
+        };
+        void handleWordClick(video, popupContainer, payload);
+      });
+    })
+  );
 
   if (native) {
-    attachCueListener(video, native, (cueText) => {
-      renderOverlayLine(nativeLine, cueText, () => {});
-    });
+    activeTrackElements.push(
+      attachCueListener(video, native, (cueText) => {
+        renderOverlayLine(nativeLine, cueText, () => {});
+      })
+    );
   }
 }
 

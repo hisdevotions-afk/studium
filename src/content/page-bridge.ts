@@ -25,10 +25,12 @@ JSON.parse = function parse(this: any, ...args: Parameters<typeof JSON.parse>) {
 } as typeof JSON.parse;
 
 let lastVideoId: number | null = null;
-setInterval(() => {
+function pollVideoId(): void {
   const videoId = readVideoIdFromDom(document);
   if (videoId !== lastVideoId) {
     lastVideoId = videoId;
     window.postMessage({ type: 'sla-copilot:videoid', videoId }, window.location.origin);
   }
-}, POLL_INTERVAL_MS);
+}
+pollVideoId();
+setInterval(pollVideoId, POLL_INTERVAL_MS);
