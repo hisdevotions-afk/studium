@@ -1,31 +1,14 @@
 import { beforeAll } from 'vitest';
 
+// TextTrack polyfill for jsdom: provides HTMLTrackElement.track property
+// jsdom 25's HTMLTrackElement implementation lacks real TextTrack/track support.
+// This polyfill fills the gap by adding a track getter to HTMLTrackElement.prototype
+// that returns a simple track object with activeCues and cues as plain arrays.
+// This file runs before every test (via vitest.config.ts setupFiles), not just for
+// cue-listener.test.ts — so changes here affect the entire test suite.
+
 beforeAll(() => {
-  // Initialize TextTrack API for jsdom
   if (typeof window !== 'undefined' && !window.TextTrack) {
-    // Create a minimal TextTrackCueList implementation
-    class TextTrackCueList {
-      private cues: Array<{ text: string; startTime: number }> = [];
-
-      get length() {
-        return this.cues.length;
-      }
-
-      constructor(cues?: Array<{ text: string; startTime: number }>) {
-        if (cues) this.cues = cues;
-      }
-
-      [Symbol.iterator]() {
-        return this.cues[Symbol.iterator]();
-      }
-
-      item(index: number) {
-        return this.cues[index] || null;
-      }
-    }
-
-    (window as any).TextTrackCueList = TextTrackCueList;
-
     // Extend HTMLTrackElement to add track property
     const originalGetTrack = Object.getOwnPropertyDescriptor(HTMLTrackElement.prototype, 'track');
     if (!originalGetTrack) {
@@ -37,8 +20,8 @@ beforeAll(() => {
               label: this.label || '',
               language: this.srclang || '',
               mode: 'hidden',
-              activeCues: new TextTrackCueList(),
-              cues: new TextTrackCueList(),
+              activeCues: [],
+              cues: [],
             };
           }
           return this._track;
