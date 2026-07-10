@@ -9,11 +9,19 @@ import type { RawNetflixTrack, LookupPayload } from '../adapter/types';
 const OVERLAY_CONTAINER_ID = 'sla-copilot-overlay';
 const POPUP_CONTAINER_ID = 'sla-copilot-popup-container';
 
+const CONTAINER_STYLES: Record<string, string> = {
+  [OVERLAY_CONTAINER_ID]:
+    'position: fixed; bottom: 8vh; left: 0; right: 0; z-index: 2147483647; text-align: center; pointer-events: none;',
+  [POPUP_CONTAINER_ID]:
+    'position: fixed; bottom: 20vh; left: 0; right: 0; z-index: 2147483647; text-align: center; pointer-events: none;',
+};
+
 function ensureContainer(id: string): HTMLElement {
   let elem = document.getElementById(id);
   if (!elem) {
     elem = document.createElement('div');
     elem.id = id;
+    elem.style.cssText = CONTAINER_STYLES[id] ?? '';
     document.body.appendChild(elem);
   }
   return elem;
@@ -22,7 +30,8 @@ function ensureContainer(id: string): HTMLElement {
 let currentVideoId: number | null = null;
 let activeTrackElements: HTMLTrackElement[] = [];
 
-function handleTracks(rawTracks: RawNetflixTrack[]): void {
+function handleTracks(movieId: number, rawTracks: RawNetflixTrack[]): void {
+  currentVideoId = movieId;
   for (const trackElem of activeTrackElements) {
     trackElem.remove();
   }
@@ -86,6 +95,6 @@ window.addEventListener('message', (event) => {
   }
 
   if (message.type === 'sla-copilot:tracks') {
-    handleTracks(message.textTracks);
+    handleTracks(message.movieId, message.textTracks);
   }
 });
