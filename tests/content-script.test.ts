@@ -44,6 +44,11 @@ describe('content-script wiring', () => {
     expect(video.querySelectorAll('track')).toHaveLength(2);
   });
 
+  it('mounts playback controls after attach', () => {
+    expect(document.querySelector('#sla-copilot-overlay .sla-copilot-speed')).not.toBeNull();
+    expect(document.querySelector('#sla-copilot-overlay .sla-copilot-repeat')).not.toBeNull();
+  });
+
   it('renders clean clickable tokens on cuechange and pauses + pops up on click', async () => {
     const targetTrackElem = video.querySelectorAll('track')[0]!;
     Object.defineProperty(targetTrackElem.track, 'activeCues', {

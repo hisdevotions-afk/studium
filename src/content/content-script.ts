@@ -2,6 +2,7 @@ import { parseBridgeMessage } from './bridge-messages';
 import { extractUsableTracks, selectTracks } from '../adapter/track-selection';
 import { attachCueListener } from '../adapter/cue-listener';
 import { renderOverlayLine } from '../overlay/overlay';
+import { renderControls } from '../overlay/controls';
 import { renderStatusMessage } from '../overlay/status-message';
 import { handleWordClick } from './orchestrate-word-click';
 import type { RawNetflixTrack, SubtitleTrack, TargetLang, LookupPayload } from '../adapter/types';
@@ -129,7 +130,9 @@ async function tryAttach(): Promise<void> {
   overlayContainer.innerHTML = '';
   const targetLine = document.createElement('div');
   const nativeLine = document.createElement('div');
-  overlayContainer.append(targetLine, nativeLine);
+  const controlsLine = document.createElement('div');
+  overlayContainer.append(targetLine, nativeLine, controlsLine);
+  renderControls(controlsLine, video, () => currentCueWindow);
 
   const targetTrackElem = await attachCueListener(video, sel.target, (cueText, startTime, endTime) => {
     currentCueWindow = { start: startTime, end: endTime };
