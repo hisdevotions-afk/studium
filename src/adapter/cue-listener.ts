@@ -1,13 +1,12 @@
 import type { SubtitleTrack } from './types';
 
-export function attachCueListener(
+export async function attachCueListener(
   video: HTMLVideoElement,
   track: SubtitleTrack,
   onCue: (cueText: string, startTime: number) => void
-): HTMLTrackElement {
+): Promise<HTMLTrackElement> {
   const trackElem = document.createElement('track');
   trackElem.kind = 'subtitles';
-  trackElem.src = track.webvttUrl;
   trackElem.srclang = track.language;
   trackElem.label = track.languageDescription;
   video.appendChild(trackElem);
@@ -19,6 +18,19 @@ export function attachCueListener(
     const cue = activeCues[0] as unknown as { text: string; startTime: number };
     onCue(cue.text, cue.startTime);
   });
+
+  // A native <track src="cross-origin-cdn-url"> is subject to normal page
+  // CORS rules and fails to load against Netflix's CDN. Fetching it
+  // ourselves (host_permissions lets this bypass CORS) and serving the
+  // result via a blob: URL keeps the native cuechange timing engine while
+  // sidestepping that restriction.
+  try {
+    const response = await fetch(track.webvttUrl);
+    const vttText = await response.text();
+    trackElem.src = URL.createObjectURL(new Blob([vttText], { type: 'text/vtt' }));
+  } catch {
+    // Network/CORS failure: this track simply produces no cues.
+  }
 
   return trackElem;
 }

@@ -65,29 +65,35 @@ async function handleTracks(movieId: number, rawTracks: RawNetflixTrack[]): Prom
   const nativeLine = document.createElement('div');
   overlayContainer.append(targetLine, nativeLine);
 
-  activeTrackElements.push(
-    attachCueListener(video, target, (cueText, startTime) => {
-      renderOverlayLine(targetLine, cueText, (token, sentence) => {
-        if (currentVideoId === null) return;
-        const payload: LookupPayload = {
-          videoId: currentVideoId,
-          timestampBucket: startTime,
-          sentence,
-          clickedSpan: token,
-          targetLang: target.language.toLowerCase().startsWith('it') ? 'it' : 'en',
-          nativeLang: 'pt-BR',
-        };
-        void handleWordClick(video, popupContainer, payload);
-      });
-    })
-  );
+  const targetTrackElem = await attachCueListener(video, target, (cueText, startTime) => {
+    renderOverlayLine(targetLine, cueText, (token, sentence) => {
+      if (currentVideoId === null) return;
+      const payload: LookupPayload = {
+        videoId: currentVideoId,
+        timestampBucket: startTime,
+        sentence,
+        clickedSpan: token,
+        targetLang: target.language.toLowerCase().startsWith('it') ? 'it' : 'en',
+        nativeLang: 'pt-BR',
+      };
+      void handleWordClick(video, popupContainer, payload);
+    });
+  });
+  if (generation !== handleTracksGeneration) {
+    targetTrackElem.remove();
+    return;
+  }
+  activeTrackElements.push(targetTrackElem);
 
   if (native) {
-    activeTrackElements.push(
-      attachCueListener(video, native, (cueText) => {
-        renderOverlayLine(nativeLine, cueText, () => {});
-      })
-    );
+    const nativeTrackElem = await attachCueListener(video, native, (cueText) => {
+      renderOverlayLine(nativeLine, cueText, () => {});
+    });
+    if (generation !== handleTracksGeneration) {
+      nativeTrackElem.remove();
+      return;
+    }
+    activeTrackElements.push(nativeTrackElem);
   }
 }
 

@@ -8,6 +8,17 @@ import { beforeAll } from 'vitest';
 // cue-listener.test.ts — so changes here affect the entire test suite.
 
 beforeAll(() => {
+  // jsdom doesn't implement URL.createObjectURL/revokeObjectURL. A fake
+  // "blob:<counter>" string is enough for tests that only check the src
+  // was set to a blob URL, not that it's a real, resolvable resource.
+  if (typeof URL.createObjectURL !== 'function') {
+    let counter = 0;
+    URL.createObjectURL = () => `blob:mock-${++counter}`;
+  }
+  if (typeof URL.revokeObjectURL !== 'function') {
+    URL.revokeObjectURL = () => {};
+  }
+
   if (typeof window !== 'undefined' && !window.TextTrack) {
     // Extend HTMLTrackElement to add track property
     const originalGetTrack = Object.getOwnPropertyDescriptor(HTMLTrackElement.prototype, 'track');
