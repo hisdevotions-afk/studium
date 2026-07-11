@@ -1,0 +1,55 @@
+<!-- watch/sim.html -->
+<!doctype html>
+<meta charset="utf-8" />
+<title>Studium — Player Simulator</title>
+<style>
+  body { background: #141414; margin: 0; font-family: monospace; }
+  video { display: block; width: 100vw; height: 70vh; background: #000; }
+  .player-timedtext {
+    position: fixed; bottom: 4vh; left: 0; right: 0;
+    text-align: center; color: yellow; font-size: 22px; z-index: 10;
+  }
+  #sim-status { color: #6f6; padding: 8px; }
+</style>
+<video id="v" muted autoplay></video>
+<!-- Fake Netflix native subtitle renderer: MUST disappear when overlay attaches -->
+<div class="player-timedtext">LEGENDA NATIVA DA NETFLIX (deve sumir)</div>
+<div id="sim-status">carregando…</div>
+<script type="module">
+  // ---- fake Netflix player: real currentTime via canvas stream ----
+  const v = document.getElementById('v');
+  const c = document.createElement('canvas');
+  c.width = 640; c.height = 360;
+  const ctx = c.getContext('2d');
+  (function draw() {
+    ctx.fillStyle = '#102030'; ctx.fillRect(0, 0, 640, 360);
+    ctx.fillStyle = '#fff'; ctx.font = '28px monospace';
+    ctx.fillText('t = ' + v.currentTime.toFixed(1) + 's  rate=' + v.playbackRate + 'x  ' + (v.paused ? 'PAUSED' : 'PLAYING'), 20, 50);
+    requestAnimationFrame(draw);
+  })();
+  v.srcObject = c.captureStream(30);
+  document.body.dataset.videoid = '99999';
+  // The `autoplay` attribute is unreliable when srcObject is assigned from a
+  // background/inactive tab (automation contexts); call play() explicitly.
+  v.play().catch((e) => console.log('[sim] play() rejected', e));
+
+  // ---- load the REAL content script as source ----
+  await import('/src/content/content-script.ts');
+
+  // ---- broadcast tracks exactly like page-bridge does ----
+  const track = (id, language, languageDescription, url) => ({
+    id, language, languageDescription,
+    isForcedNarrative: false, isNoneTrack: false, rawTrackType: 'subtitles',
+    downloadables: { 'webvtt-lssdh-ios8': { urls: [{ url }] } },
+  });
+  window.postMessage({
+    type: 'sla-copilot:tracks',
+    movieId: 99999,
+    textTracks: [
+      track('en1', 'en', 'English', '/watch/fixtures/en.vtt'),
+      track('pt1', 'pt-BR', 'Português', '/watch/fixtures/pt.vtt'),
+    ],
+  }, location.origin);
+  document.getElementById('sim-status').textContent =
+    'simulador ativo — movieId 99999, tracks en + pt-BR enviadas';
+</script>

@@ -1,0 +1,16 @@
+WEBVTT
+
+00:00:01.000 --> 00:00:04.000
+<c.white><c.mono_sans>HEY, JIM.</c.mono_sans></c.white>
+
+00:00:04.500 --> 00:00:08.000
+<c.white><c.mono_sans>STANLEY IS BACK &amp; READY.</c.mono_sans></c.white>
+
+00:00:08.500 --> 00:00:12.000
+<i>I want to be into someone.</i>
+
+00:00:12.500 --> 00:00:16.000
+This plain line has no markup at all.
+
+00:00:16.500 --> 00:00:20.000
+<c.white>Final styled line for looping tests.</c.white>
