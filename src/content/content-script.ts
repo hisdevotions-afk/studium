@@ -8,6 +8,7 @@ import type { RawNetflixTrack, SubtitleTrack, TargetLang, LookupPayload } from '
 
 const OVERLAY_CONTAINER_ID = 'sla-copilot-overlay';
 const POPUP_CONTAINER_ID = 'sla-copilot-popup-container';
+const NATIVE_SUB_STYLE_ID = 'sla-copilot-hide-native';
 const POLL_INTERVAL_MS = 1000;
 
 const CONTAINER_STYLES: Record<string, string> = {
@@ -26,6 +27,19 @@ function ensureContainer(id: string): HTMLElement {
     document.body.appendChild(elem);
   }
   return elem;
+}
+
+// Flow 1.6: our overlay replaces Netflix's subtitle renderer; both visible at
+// once is double text on screen.
+function setNativeSubtitlesHidden(hidden: boolean): void {
+  const existing = document.getElementById(NATIVE_SUB_STYLE_ID);
+  if (hidden && !existing) {
+    const style = document.createElement('style');
+    style.id = NATIVE_SUB_STYLE_ID;
+    style.textContent = '.player-timedtext { display: none !important; }';
+    document.head.appendChild(style);
+  }
+  if (!hidden) existing?.remove();
 }
 
 interface Selection {
@@ -138,6 +152,8 @@ async function tryAttach(): Promise<void> {
     }
     activeTrackElements.push(nativeTrackElem);
   }
+
+  setNativeSubtitlesHidden(true);
 }
 
 // ponytail: naive 1s poll; a MutationObserver would be tighter if this ever
@@ -149,6 +165,7 @@ setInterval(() => {
     if (attachedVideo) {
       attachedVideo = null;
       clearTracks();
+      setNativeSubtitlesHidden(false);
       document.getElementById(OVERLAY_CONTAINER_ID)?.replaceChildren();
       document.getElementById(POPUP_CONTAINER_ID)?.replaceChildren();
     }

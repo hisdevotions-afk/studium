@@ -63,4 +63,10 @@ describe('content-script wiring', () => {
     expect(popup).not.toBeNull();
     expect(popup!.textContent).toContain('INTO');
   });
+
+  it('hides Netflix native subtitles while attached', () => {
+    const style = document.getElementById('sla-copilot-hide-native');
+    expect(style).not.toBeNull();
+    expect(style!.textContent).toContain('.player-timedtext');
+  });
 });
