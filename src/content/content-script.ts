@@ -53,6 +53,9 @@ let selection: Selection | null = null;
 let attachedVideo: HTMLVideoElement | null = null;
 let attachSeq = 0;
 let activeTrackElements: HTMLTrackElement[] = [];
+// The target-track cue window currently on screen. Task 6's repeat-phrase
+// control reads this to know where to loop back to.
+let currentCueWindow: { start: number; end: number } | null = null;
 
 function clearTracks(): void {
   for (const trackElem of activeTrackElements) {
@@ -128,7 +131,8 @@ async function tryAttach(): Promise<void> {
   const nativeLine = document.createElement('div');
   overlayContainer.append(targetLine, nativeLine);
 
-  const targetTrackElem = await attachCueListener(video, sel.target, (cueText, startTime) => {
+  const targetTrackElem = await attachCueListener(video, sel.target, (cueText, startTime, endTime) => {
+    currentCueWindow = { start: startTime, end: endTime };
     renderOverlayLine(targetLine, cueText, (token, sentence) => {
       if (currentVideoId === null) return;
       const payload: LookupPayload = {

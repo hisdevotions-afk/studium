@@ -52,14 +52,14 @@ describe('attachCueListener', () => {
     const onCue = vi.fn();
     const trackElem = await attachCueListener(video, sampleTrack, onCue);
 
-    const fakeCue = { text: 'be into someone', startTime: 12.5 };
+    const fakeCue = { text: 'be into someone', startTime: 12.5, endTime: 15.0 };
     Object.defineProperty(trackElem.track, 'activeCues', {
       value: [fakeCue],
       configurable: true,
     });
     trackElem.dispatchEvent(new Event('cuechange'));
 
-    expect(onCue).toHaveBeenCalledWith('be into someone', 12.5);
+    expect(onCue).toHaveBeenCalledWith('be into someone', 12.5, 15.0);
   });
 
   it('strips WebVTT cue markup and decodes entities before passing text to onCue', async () => {
@@ -70,11 +70,12 @@ describe('attachCueListener', () => {
     const fakeCue = {
       text: '<c.white><c.mono_sans>HEY, JIM &amp; PAM.</c.mono_sans></c.white>',
       startTime: 1.6,
+      endTime: 3.2,
     };
     Object.defineProperty(trackElem.track, 'activeCues', { value: [fakeCue], configurable: true });
     trackElem.dispatchEvent(new Event('cuechange'));
 
-    expect(onCue).toHaveBeenCalledWith('HEY, JIM & PAM.', 1.6);
+    expect(onCue).toHaveBeenCalledWith('HEY, JIM & PAM.', 1.6, 3.2);
   });
 
   it('does not call onCue when there are no active cues', async () => {

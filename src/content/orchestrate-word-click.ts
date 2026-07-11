@@ -9,5 +9,8 @@ export async function handleWordClick(
 ): Promise<void> {
   video.pause();
   const explanation = await explainLookup(payload);
-  renderPopup(popupContainer, payload, explanation);
+  renderPopup(popupContainer, payload, explanation, () => {
+    popupContainer.innerHTML = '';
+    void video.play();
+  });
 }

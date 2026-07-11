@@ -1,6 +1,11 @@
 import type { LookupPayload, Explanation } from '../adapter/types';
 
-export function renderPopup(container: HTMLElement, payload: LookupPayload, explanation: Explanation): HTMLElement {
+export function renderPopup(
+  container: HTMLElement,
+  payload: LookupPayload,
+  explanation: Explanation,
+  onResume: () => void
+): HTMLElement {
   container.innerHTML = '';
   const popup = document.createElement('div');
   popup.className = 'sla-copilot-popup';
@@ -22,7 +27,13 @@ export function renderPopup(container: HTMLElement, payload: LookupPayload, expl
   saveButton.style.cssText = 'cursor: pointer; padding: 6px 12px; margin-top: 4px;';
   saveButton.textContent = 'salvar';
 
-  popup.append(wordElem, explanationElem, saveButton);
+  const resumeButton = document.createElement('button');
+  resumeButton.className = 'sla-copilot-popup-resume';
+  resumeButton.style.cssText = 'cursor: pointer; padding: 6px 12px; margin-top: 4px; margin-left: 8px;';
+  resumeButton.textContent = 'continuar ▶';
+  resumeButton.addEventListener('click', onResume);
+
+  popup.append(wordElem, explanationElem, saveButton, resumeButton);
   container.appendChild(popup);
   return popup;
 }

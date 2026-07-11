@@ -17,7 +17,7 @@ export function stripVttMarkup(text: string): string {
 export async function attachCueListener(
   video: HTMLVideoElement,
   track: SubtitleTrack,
-  onCue: (cueText: string, startTime: number) => void
+  onCue: (cueText: string, startTime: number, endTime: number) => void
 ): Promise<HTMLTrackElement> {
   const trackElem = document.createElement('track');
   trackElem.kind = 'subtitles';
@@ -29,8 +29,8 @@ export async function attachCueListener(
   trackElem.addEventListener('cuechange', () => {
     const activeCues = trackElem.track.activeCues;
     if (!activeCues || activeCues.length === 0) return;
-    const cue = activeCues[0] as unknown as { text: string; startTime: number };
-    onCue(stripVttMarkup(cue.text), cue.startTime);
+    const cue = activeCues[0] as unknown as { text: string; startTime: number; endTime: number };
+    onCue(stripVttMarkup(cue.text), cue.startTime, cue.endTime);
   });
 
   // A native <track src="cross-origin-cdn-url"> is subject to normal page

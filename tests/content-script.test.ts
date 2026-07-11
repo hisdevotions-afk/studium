@@ -47,7 +47,7 @@ describe('content-script wiring', () => {
   it('renders clean clickable tokens on cuechange and pauses + pops up on click', async () => {
     const targetTrackElem = video.querySelectorAll('track')[0]!;
     Object.defineProperty(targetTrackElem.track, 'activeCues', {
-      value: [{ text: '<c.white>BE INTO SOMEONE</c.white>', startTime: 8.5 }],
+      value: [{ text: '<c.white>BE INTO SOMEONE</c.white>', startTime: 8.5, endTime: 10.5 }],
       configurable: true,
     });
     targetTrackElem.dispatchEvent(new Event('cuechange'));
@@ -62,6 +62,13 @@ describe('content-script wiring', () => {
     const popup = document.querySelector('#sla-copilot-popup-container .sla-copilot-popup');
     expect(popup).not.toBeNull();
     expect(popup!.textContent).toContain('INTO');
+
+    const resumeBtn = document.querySelector('.sla-copilot-popup-resume') as HTMLElement;
+    expect(resumeBtn.textContent).toBe('continuar ▶');
+    resumeBtn.click();
+
+    expect(video.play).toHaveBeenCalled();
+    expect(document.querySelector('#sla-copilot-popup-container .sla-copilot-popup')).toBeNull();
   });
 
   it('hides Netflix native subtitles while attached', () => {
