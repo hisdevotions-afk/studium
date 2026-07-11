@@ -4,7 +4,8 @@ export function renderPopup(
   container: HTMLElement,
   payload: LookupPayload,
   explanation: Explanation,
-  onResume: () => void
+  onResume: () => void,
+  onSave: () => Promise<void>
 ): HTMLElement {
   container.innerHTML = '';
   const popup = document.createElement('div');
@@ -26,6 +27,12 @@ export function renderPopup(
   saveButton.className = 'sla-copilot-popup-save';
   saveButton.style.cssText = 'cursor: pointer; padding: 6px 12px; margin-top: 4px;';
   saveButton.textContent = 'salvar';
+  saveButton.addEventListener('click', () => {
+    void onSave().then(() => {
+      saveButton.textContent = 'salvo ✓';
+      saveButton.disabled = true;
+    });
+  });
 
   const resumeButton = document.createElement('button');
   resumeButton.className = 'sla-copilot-popup-resume';
