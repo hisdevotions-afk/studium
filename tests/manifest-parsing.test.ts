@@ -25,6 +25,19 @@ describe('injectWebvttProfile', () => {
     const result = injectWebvttProfile(value);
     expect(result).toEqual({ unrelated: 'data' });
   });
+
+  it('does not overflow on circular objects (Netflix stringifies cyclic app state)', () => {
+    const value: Record<string, unknown> = { state: {} };
+    (value.state as Record<string, unknown>).back = value; // cycle
+    expect(() => injectWebvttProfile(value)).not.toThrow();
+  });
+
+  it('still finds a profiles array in an object that also contains a cycle', () => {
+    const value: Record<string, unknown> = { profiles: ['simplesdh'] };
+    value.self = value; // cycle alongside the real payload
+    injectWebvttProfile(value);
+    expect(value.profiles).toContain('webvtt-lssdh-ios8');
+  });
 });
 
 describe('extractManifestPayload', () => {

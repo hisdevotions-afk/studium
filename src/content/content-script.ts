@@ -56,6 +56,7 @@ function handleTracks(movieId: number, rawTracks: RawNetflixTrack[]): void {
   currentVideoId = movieId;
   const usable = extractUsableTracks(rawTracks);
   const { target, native } = selectTracks(usable);
+  console.log('[studium] handleTracks', { movieId, rawCount: rawTracks.length, usableLangs: usable.map((t) => t.language), target: target?.language, native: native?.language });
 
   attachSeq++; // abandon any in-flight attach from a previous title
   attachedVideo = null;
@@ -66,7 +67,11 @@ function handleTracks(movieId: number, rawTracks: RawNetflixTrack[]): void {
 
   if (!target) {
     selection = null;
-    renderStatusMessage(overlayContainer, 'idioma não disponível para este título');
+    // Trailers on /browse also produce manifests; don't paint status text
+    // over the browse UI.
+    if (onWatchPage()) {
+      renderStatusMessage(overlayContainer, 'idioma não disponível para este título');
+    }
     return;
   }
 
@@ -78,12 +83,20 @@ function handleTracks(movieId: number, rawTracks: RawNetflixTrack[]): void {
   void tryAttach();
 }
 
+function onWatchPage(): boolean {
+  return location.pathname.startsWith('/watch');
+}
+
 async function tryAttach(): Promise<void> {
+  // Only attach on the player page — /browse has hover-preview <video>s we
+  // must never decorate.
+  if (!onWatchPage()) return;
   const sel = selection;
   if (!sel) return;
   const video = document.querySelector('video');
   if (!video || video === attachedVideo) return;
 
+  console.log('[studium] tryAttach: found <video>, attaching', { target: sel.target.language, native: sel.native?.language });
   const seq = ++attachSeq;
   attachedVideo = video; // optimistic: stops the poll from launching a duplicate attach
   clearTracks();
@@ -129,7 +142,20 @@ async function tryAttach(): Promise<void> {
 
 // ponytail: naive 1s poll; a MutationObserver would be tighter if this ever
 // shows up on the profiler, but a single querySelector per tick is cheap.
-setInterval(() => void tryAttach(), POLL_INTERVAL_MS);
+setInterval(() => {
+  if (!onWatchPage()) {
+    // SPA-navigated away from the player: drop tracks and wipe the fixed
+    // overlay so the last subtitle line doesn't linger over /browse.
+    if (attachedVideo) {
+      attachedVideo = null;
+      clearTracks();
+      document.getElementById(OVERLAY_CONTAINER_ID)?.replaceChildren();
+      document.getElementById(POPUP_CONTAINER_ID)?.replaceChildren();
+    }
+    return;
+  }
+  void tryAttach();
+}, POLL_INTERVAL_MS);
 
 window.addEventListener('message', (event) => {
   const message = parseBridgeMessage(event, window);

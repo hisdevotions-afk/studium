@@ -3,10 +3,17 @@ import { readVideoIdFromDom } from './video-id';
 
 const POLL_INTERVAL_MS = 500;
 
+// These hooks sit inside Netflix's own JSON calls: any exception we leak
+// breaks their caller and can hang the player on boot. Our side-channel work
+// is best-effort — swallow our failures, always defer to the original.
 const originalStringify = JSON.stringify;
 JSON.stringify = function stringify(this: any, ...args: Parameters<typeof JSON.stringify>) {
-  if (args[0] !== undefined) {
-    injectWebvttProfile(args[0]);
+  try {
+    if (args[0] !== undefined) {
+      injectWebvttProfile(args[0]);
+    }
+  } catch {
+    // ignore: worst case this request just doesn't get the WebVTT profile
   }
   return originalStringify.apply(this, args);
 } as typeof JSON.stringify;
@@ -14,12 +21,16 @@ JSON.stringify = function stringify(this: any, ...args: Parameters<typeof JSON.s
 const originalParse = JSON.parse;
 JSON.parse = function parse(this: any, ...args: Parameters<typeof JSON.parse>) {
   const value = originalParse.apply(this, args);
-  const manifest = extractManifestPayload(value);
-  if (manifest) {
-    window.postMessage(
-      { type: 'sla-copilot:tracks', movieId: manifest.movieId, textTracks: manifest.textTracks },
-      window.location.origin
-    );
+  try {
+    const manifest = extractManifestPayload(value);
+    if (manifest) {
+      window.postMessage(
+        { type: 'sla-copilot:tracks', movieId: manifest.movieId, textTracks: manifest.textTracks },
+        window.location.origin
+      );
+    }
+  } catch {
+    // ignore: worst case we miss one manifest broadcast
   }
   return value;
 } as typeof JSON.parse;

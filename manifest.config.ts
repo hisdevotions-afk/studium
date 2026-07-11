@@ -7,14 +7,17 @@ export default defineManifest({
   description: 'Pause qualquer cena da Netflix, clique numa palavra, e receba uma explicação de verdade.',
   host_permissions: ['https://*.nflxvideo.net/*'],
   content_scripts: [
+    // Netflix is an SPA: clicking play on /browse swaps the URL to /watch
+    // without a page load, so a /watch/* match never injects on the normal
+    // flow. Match the whole site and let the scripts gate on the pathname.
     {
-      matches: ['https://www.netflix.com/watch/*'],
+      matches: ['https://www.netflix.com/*'],
       js: ['src/content/page-bridge.ts'],
       world: 'MAIN',
       run_at: 'document_start',
     },
     {
-      matches: ['https://www.netflix.com/watch/*'],
+      matches: ['https://www.netflix.com/*'],
       js: ['src/content/content-script.ts'],
       run_at: 'document_idle',
     },
