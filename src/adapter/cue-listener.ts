@@ -42,13 +42,7 @@ export async function attachCueListener(
     const response = await fetch(track.webvttUrl);
     const vttText = await response.text();
     trackElem.src = URL.createObjectURL(new Blob([vttText], { type: 'text/vtt' }));
-    console.log('[studium] fetched VTT', { lang: track.language, bytes: vttText.length, head: vttText.slice(0, 60) });
-    trackElem.addEventListener('load', () =>
-      console.log('[studium] <track> loaded', { lang: track.language, mode: trackElem.track.mode, cues: trackElem.track.cues?.length })
-    );
-    trackElem.addEventListener('error', () => console.log('[studium] <track> error', { lang: track.language }));
-  } catch (e) {
-    console.log('[studium] VTT fetch failed', { lang: track.language, error: String(e) });
+  } catch {
     // Network/CORS failure: this track simply produces no cues.
   }
 

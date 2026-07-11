@@ -74,7 +74,6 @@ function handleTracks(movieId: number, rawTracks: RawNetflixTrack[]): void {
   currentVideoId = movieId;
   const usable = extractUsableTracks(rawTracks);
   const { target, native } = selectTracks(usable);
-  console.log('[studium] handleTracks', { movieId, rawCount: rawTracks.length, usableLangs: usable.map((t) => t.language), target: target?.language, native: native?.language });
 
   attachSeq++; // abandon any in-flight attach from a previous title
   attachedVideo = null;
@@ -120,7 +119,6 @@ async function tryAttach(): Promise<void> {
   const video = document.querySelector('video');
   if (!video || video === attachedVideo) return;
 
-  console.log('[studium] tryAttach: found <video>, attaching', { target: sel.target.language, native: sel.native?.language });
   const seq = ++attachSeq;
   attachedVideo = video; // optimistic: stops the poll from launching a duplicate attach
   clearTracks();
