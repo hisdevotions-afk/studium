@@ -6,6 +6,11 @@ export default defineManifest({
   version: '0.1.0',
   description: 'Pause qualquer cena da Netflix, clique numa palavra, e receba uma explicação de verdade.',
   host_permissions: ['https://*.nflxvideo.net/*'],
+  permissions: ['storage'],
+  action: {
+    default_title: 'Studium',
+    default_popup: 'src/popup/index.html',
+  },
   content_scripts: [
     // Netflix is an SPA: clicking play on /browse swaps the URL to /watch
     // without a page load, so a /watch/* match never injects on the normal
