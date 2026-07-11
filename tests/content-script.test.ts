@@ -69,4 +69,46 @@ describe('content-script wiring', () => {
     expect(style).not.toBeNull();
     expect(style!.textContent).toContain('.player-timedtext');
   });
+
+  it('unhides native subtitles when switching to a title with no usable target track', async () => {
+    // Sanity: still hidden from the previous title's successful attach.
+    expect(document.getElementById('sla-copilot-hide-native')).not.toBeNull();
+
+    window.dispatchEvent(new MessageEvent('message', {
+      data: {
+        type: 'sla-copilot:tracks', movieId: 88888,
+        textTracks: [track('fr1', 'fr', 'Français')], // no en/it/pt track usable
+      },
+      source: window,
+    }));
+    await vi.advanceTimersByTimeAsync(1100);
+
+    expect(document.getElementById('sla-copilot-hide-native')).toBeNull();
+  });
+
+  it('unhides native subtitles on leaving /watch even if attachedVideo was already null', async () => {
+    // Re-hide by re-sending the original (usable) tracks and letting it attach.
+    sendTracks();
+    await vi.advanceTimersByTimeAsync(1100);
+    expect(document.getElementById('sla-copilot-hide-native')).not.toBeNull();
+
+    // Switch to a title with no usable target track: nulls attachedVideo but
+    // (pre-fix) left the hide-style in place.
+    window.dispatchEvent(new MessageEvent('message', {
+      data: {
+        type: 'sla-copilot:tracks', movieId: 77777,
+        textTracks: [track('fr1', 'fr', 'Français')],
+      },
+      source: window,
+    }));
+    await vi.advanceTimersByTimeAsync(1100);
+
+    // Now leave /watch entirely with attachedVideo already null.
+    window.history.pushState({}, '', '/browse');
+    await vi.advanceTimersByTimeAsync(1100);
+
+    expect(document.getElementById('sla-copilot-hide-native')).toBeNull();
+
+    window.history.pushState({}, '', '/watch/99999');
+  });
 });

@@ -75,6 +75,9 @@ function handleTracks(movieId: number, rawTracks: RawNetflixTrack[]): void {
   attachSeq++; // abandon any in-flight attach from a previous title
   attachedVideo = null;
   clearTracks();
+  // Unconditional: a previous title may have hidden native subs and this one
+  // may have no usable target track, in which case nothing re-hides them.
+  setNativeSubtitlesHidden(false);
 
   const overlayContainer = ensureContainer(OVERLAY_CONTAINER_ID);
   ensureContainer(POPUP_CONTAINER_ID);
@@ -161,11 +164,14 @@ async function tryAttach(): Promise<void> {
 setInterval(() => {
   if (!onWatchPage()) {
     // SPA-navigated away from the player: drop tracks and wipe the fixed
-    // overlay so the last subtitle line doesn't linger over /browse.
+    // overlay so the last subtitle line doesn't linger over /browse. Unhide
+    // unconditionally — attachedVideo may already be null (e.g. the title
+    // had no usable track) while native subs are still hidden from an
+    // earlier title.
+    setNativeSubtitlesHidden(false);
     if (attachedVideo) {
       attachedVideo = null;
       clearTracks();
-      setNativeSubtitlesHidden(false);
       document.getElementById(OVERLAY_CONTAINER_ID)?.replaceChildren();
       document.getElementById(POPUP_CONTAINER_ID)?.replaceChildren();
     }
