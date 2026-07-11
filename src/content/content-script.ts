@@ -75,15 +75,18 @@ function handleTracks(movieId: number, rawTracks: RawNetflixTrack[]): void {
   attachSeq++; // abandon any in-flight attach from a previous title
   attachedVideo = null;
   clearTracks();
-  // Unconditional: a previous title may have hidden native subs and this one
-  // may have no usable target track, in which case nothing re-hides them.
-  setNativeSubtitlesHidden(false);
 
   const overlayContainer = ensureContainer(OVERLAY_CONTAINER_ID);
   ensureContainer(POPUP_CONTAINER_ID);
 
   if (!target) {
     selection = null;
+    // A previous title may have hidden native subs and this one has no
+    // usable target track, so nothing else will re-hide them. Only unhide
+    // here — a successful target on this path re-hides itself at the end of
+    // tryAttach(), so unhiding unconditionally at the top would flash
+    // Netflix's native subs during every ordinary title-to-title switch.
+    setNativeSubtitlesHidden(false);
     // Trailers on /browse also produce manifests; don't paint status text
     // over the browse UI.
     if (onWatchPage()) {

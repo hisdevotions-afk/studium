@@ -70,6 +70,31 @@ describe('content-script wiring', () => {
     expect(style!.textContent).toContain('.player-timedtext');
   });
 
+  it('does not flicker native subtitles when switching between two titles that both have a valid target track', async () => {
+    // Sanity: hidden from the previous title's successful attach.
+    const styleBefore = document.getElementById('sla-copilot-hide-native');
+    expect(styleBefore).not.toBeNull();
+
+    // Switch to a different title that also has a usable target track.
+    window.dispatchEvent(new MessageEvent('message', {
+      data: {
+        type: 'sla-copilot:tracks', movieId: 55555,
+        textTracks: [track('en2', 'en', 'English'), track('pt2', 'pt-BR', 'Português')],
+      },
+      source: window,
+    }));
+    await vi.advanceTimersByTimeAsync(1100);
+
+    const styleAfter = document.getElementById('sla-copilot-hide-native');
+    expect(styleAfter).not.toBeNull();
+    // setNativeSubtitlesHidden(false) is a no-op once already hidden, but if
+    // handleTracks called unhide unconditionally (the round-2 regression),
+    // the tag would be removed and a fresh one recreated at the end of
+    // tryAttach — a different DOM node. Same node proves it was never
+    // removed, i.e. no flicker.
+    expect(styleAfter).toBe(styleBefore);
+  });
+
   it('unhides native subtitles when switching to a title with no usable target track', async () => {
     // Sanity: still hidden from the previous title's successful attach.
     expect(document.getElementById('sla-copilot-hide-native')).not.toBeNull();
@@ -86,22 +111,23 @@ describe('content-script wiring', () => {
     expect(document.getElementById('sla-copilot-hide-native')).toBeNull();
   });
 
-  it('unhides native subtitles on leaving /watch even if attachedVideo was already null', async () => {
+  it('unhides native subtitles on leaving /watch, isolated from the no-target guard', async () => {
     // Re-hide by re-sending the original (usable) tracks and letting it attach.
     sendTracks();
     await vi.advanceTimersByTimeAsync(1100);
     expect(document.getElementById('sla-copilot-hide-native')).not.toBeNull();
 
-    // Switch to a title with no usable target track: nulls attachedVideo but
-    // (pre-fix) left the hide-style in place.
-    window.dispatchEvent(new MessageEvent('message', {
-      data: {
-        type: 'sla-copilot:tracks', movieId: 77777,
-        textTracks: [track('fr1', 'fr', 'Français')],
-      },
-      source: window,
-    }));
+    // Reach "hide-style present + attachedVideo null" WITHOUT going through
+    // the no-target branch (which now unhides on its own and would make this
+    // test pass regardless of the leave-/watch guard). Instead, pull the
+    // <video> out from under a subsequent *valid*-target tracks message:
+    // handleTracks unconditionally nulls attachedVideo, then tryAttach's
+    // querySelector('video') finds nothing and bails before it ever hides or
+    // unhides anything. Style tag is left exactly as it was: present.
+    video.remove();
+    sendTracks();
     await vi.advanceTimersByTimeAsync(1100);
+    expect(document.getElementById('sla-copilot-hide-native')).not.toBeNull();
 
     // Now leave /watch entirely with attachedVideo already null.
     window.history.pushState({}, '', '/browse');
@@ -109,6 +135,7 @@ describe('content-script wiring', () => {
 
     expect(document.getElementById('sla-copilot-hide-native')).toBeNull();
 
+    document.body.appendChild(video);
     window.history.pushState({}, '', '/watch/99999');
   });
 });
