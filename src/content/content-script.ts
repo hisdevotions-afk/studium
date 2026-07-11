@@ -51,9 +51,11 @@ async function handleTracks(movieId: number, rawTracks: RawNetflixTrack[]): Prom
     return;
   }
 
-  // Netflix's manifest JSON.parse (which triggers this handler) can fire before
-  // the <video> element is mounted, so wait for it rather than failing once.
-  const video = await waitForVideoElement(document);
+  // Netflix's manifest JSON.parse (which triggers this handler) can fire well
+  // before the <video> element is mounted — DRM/session negotiation on a
+  // fresh page load can take several seconds — so wait generously rather
+  // than failing once.
+  const video = await waitForVideoElement(document, 15000);
   if (generation !== handleTracksGeneration) return; // a newer tracks message superseded this one
   if (!video) {
     renderStatusMessage(overlayContainer, 'temporariamente limitado');
