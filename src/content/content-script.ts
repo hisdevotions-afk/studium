@@ -4,6 +4,7 @@ import { attachCueListener } from '../adapter/cue-listener';
 import { renderOverlayLine } from '../overlay/overlay';
 import { renderStatusMessage } from '../overlay/status-message';
 import { handleWordClick } from './orchestrate-word-click';
+import { waitForVideoElement } from './wait-for-video';
 import type { RawNetflixTrack, LookupPayload } from '../adapter/types';
 
 const OVERLAY_CONTAINER_ID = 'sla-copilot-overlay';
@@ -29,8 +30,10 @@ function ensureContainer(id: string): HTMLElement {
 
 let currentVideoId: number | null = null;
 let activeTrackElements: HTMLTrackElement[] = [];
+let handleTracksGeneration = 0;
 
-function handleTracks(movieId: number, rawTracks: RawNetflixTrack[]): void {
+async function handleTracks(movieId: number, rawTracks: RawNetflixTrack[]): Promise<void> {
+  const generation = ++handleTracksGeneration;
   currentVideoId = movieId;
   for (const trackElem of activeTrackElements) {
     trackElem.remove();
@@ -48,7 +51,10 @@ function handleTracks(movieId: number, rawTracks: RawNetflixTrack[]): void {
     return;
   }
 
-  const video = document.querySelector('video');
+  // Netflix's manifest JSON.parse (which triggers this handler) can fire before
+  // the <video> element is mounted, so wait for it rather than failing once.
+  const video = await waitForVideoElement(document);
+  if (generation !== handleTracksGeneration) return; // a newer tracks message superseded this one
   if (!video) {
     renderStatusMessage(overlayContainer, 'temporariamente limitado');
     return;
@@ -95,6 +101,6 @@ window.addEventListener('message', (event) => {
   }
 
   if (message.type === 'sla-copilot:tracks') {
-    handleTracks(message.movieId, message.textTracks);
+    void handleTracks(message.movieId, message.textTracks);
   }
 });
