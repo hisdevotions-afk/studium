@@ -5,11 +5,24 @@ import { renderOverlayLine } from '../overlay/overlay';
 import { renderControls } from '../overlay/controls';
 import { renderStatusMessage } from '../overlay/status-message';
 import { handleWordClick } from './orchestrate-word-click';
-import { isEnabled, ENABLED_KEY } from '../lookup/settings';
-import type { RawNetflixTrack, SubtitleTrack, TargetLang, LookupPayload } from '../adapter/types';
+import {
+  isEnabled,
+  getLanguages,
+  ENABLED_KEY,
+  NATIVE_LANG_KEY,
+  TARGET_LANG_KEY,
+} from '../lookup/settings';
+import type {
+  RawNetflixTrack,
+  SubtitleTrack,
+  TargetLang,
+  NativeLang,
+  LookupPayload,
+} from '../adapter/types';
 
 const OVERLAY_CONTAINER_ID = 'sla-copilot-overlay';
 const POPUP_CONTAINER_ID = 'sla-copilot-popup-container';
+const CONTROLS_CONTAINER_ID = 'sla-copilot-controls';
 const NATIVE_SUB_STYLE_ID = 'sla-copilot-hide-native';
 const POLL_INTERVAL_MS = 1000;
 
@@ -18,6 +31,10 @@ const CONTAINER_STYLES: Record<string, string> = {
     'position: fixed; bottom: 8vh; left: 0; right: 0; z-index: 2147483647; text-align: center; pointer-events: none;',
   [POPUP_CONTAINER_ID]:
     'position: fixed; bottom: 20vh; left: 0; right: 0; z-index: 2147483647; text-align: center; pointer-events: none;',
+  // Own container above the subtitles and clear of Netflix's bottom control
+  // bar, so the speed/repeat buttons stay clickable.
+  [CONTROLS_CONTAINER_ID]:
+    'position: fixed; bottom: 16vh; left: 0; right: 0; z-index: 2147483647; text-align: center; pointer-events: none;',
 };
 
 function ensureContainer(id: string): HTMLElement {
@@ -55,6 +72,12 @@ interface Selection {
 // immediately. Starts optimistically true so a fast player load isn't blocked
 // waiting on the async read; the init below corrects it if actually disabled.
 let enabled = true;
+// Chosen study + native languages (toolbar popup). Synced on load and kept live
+// via chrome.storage.onChanged; a change re-runs selection on the cached tracks.
+let targetLangPref: TargetLang = 'en';
+let nativeLangPref: NativeLang = 'pt';
+let lastRawTracks: RawNetflixTrack[] | null = null;
+let lastMovieId: number | null = null;
 let currentVideoId: number | null = null;
 let selection: Selection | null = null;
 let attachedVideo: HTMLVideoElement | null = null;
@@ -80,6 +103,7 @@ function teardownOverlay(): void {
     clearTracks();
     document.getElementById(OVERLAY_CONTAINER_ID)?.replaceChildren();
     document.getElementById(POPUP_CONTAINER_ID)?.replaceChildren();
+    document.getElementById(CONTROLS_CONTAINER_ID)?.replaceChildren();
   }
 }
 
@@ -90,9 +114,12 @@ function teardownOverlay(): void {
 // is currently live, re-attaching if Netflix swaps the element.
 function handleTracks(movieId: number, rawTracks: RawNetflixTrack[]): void {
   currentVideoId = movieId;
+  // Cache so a language change can re-select without waiting for a new manifest.
+  lastMovieId = movieId;
+  lastRawTracks = rawTracks;
   if (!enabled) return;
   const usable = extractUsableTracks(rawTracks);
-  const { target, native } = selectTracks(usable);
+  const { target, native } = selectTracks(usable, targetLangPref, nativeLangPref);
 
   attachSeq++; // abandon any in-flight attach from a previous title
   attachedVideo = null;
@@ -117,11 +144,7 @@ function handleTracks(movieId: number, rawTracks: RawNetflixTrack[]): void {
     return;
   }
 
-  selection = {
-    target,
-    native,
-    targetLang: target.language.toLowerCase().startsWith('it') ? 'it' : 'en',
-  };
+  selection = { target, native, targetLang: targetLangPref };
   void tryAttach();
 }
 
@@ -148,9 +171,9 @@ async function tryAttach(): Promise<void> {
   overlayContainer.innerHTML = '';
   const targetLine = document.createElement('div');
   const nativeLine = document.createElement('div');
-  const controlsLine = document.createElement('div');
-  overlayContainer.append(targetLine, nativeLine, controlsLine);
-  renderControls(controlsLine, video, () => currentCueWindow);
+  overlayContainer.append(targetLine, nativeLine);
+  const controlsContainer = ensureContainer(CONTROLS_CONTAINER_ID);
+  renderControls(controlsContainer, video, () => currentCueWindow);
 
   const targetTrackElem = await attachCueListener(video, sel.target, (cueText, startTime, endTime) => {
     currentCueWindow = { start: startTime, end: endTime };
@@ -162,7 +185,7 @@ async function tryAttach(): Promise<void> {
         sentence,
         clickedSpan: token,
         targetLang: sel.targetLang,
-        nativeLang: 'pt-BR',
+        nativeLang: nativeLangPref,
       };
       void handleWordClick(video, popupContainer, payload);
     });
@@ -202,18 +225,35 @@ setInterval(() => {
   void tryAttach();
 }, POLL_INTERVAL_MS);
 
-// Sync the on/off toggle from storage, then keep it live: flipping the switch
-// in the toolbar popup either tears the overlay down or re-attaches at once.
+// Re-run selection on the last-seen manifest — used when the user changes the
+// enabled flag or the languages without re-navigating.
+function reselect(): void {
+  if (lastRawTracks && lastMovieId !== null) handleTracks(lastMovieId, lastRawTracks);
+}
+
+// Sync toggle + languages from storage on load, then keep them live: flipping
+// the switch or changing a language in the toolbar popup takes effect at once.
 void isEnabled().then((v) => {
   enabled = v;
   if (!enabled) teardownOverlay();
 });
+void getLanguages().then(({ native, target }) => {
+  nativeLangPref = native;
+  targetLangPref = target;
+  reselect();
+});
 if (typeof chrome !== 'undefined' && chrome.storage?.onChanged) {
   chrome.storage.onChanged.addListener((changes) => {
-    if (!(ENABLED_KEY in changes)) return;
-    enabled = changes[ENABLED_KEY]!.newValue !== false;
-    if (!enabled) teardownOverlay();
-    else void tryAttach();
+    if (ENABLED_KEY in changes) {
+      enabled = changes[ENABLED_KEY]!.newValue !== false;
+      if (!enabled) teardownOverlay();
+      else reselect();
+    }
+    if (NATIVE_LANG_KEY in changes || TARGET_LANG_KEY in changes) {
+      if (NATIVE_LANG_KEY in changes) nativeLangPref = changes[NATIVE_LANG_KEY]!.newValue as NativeLang;
+      if (TARGET_LANG_KEY in changes) targetLangPref = changes[TARGET_LANG_KEY]!.newValue as TargetLang;
+      reselect();
+    }
   });
 }
 

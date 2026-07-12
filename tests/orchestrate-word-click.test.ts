@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { handleWordClick } from '../src/content/orchestrate-word-click';
 import { listVocabulary } from '../src/lookup/vocabulary';
 import type { LookupPayload } from '../src/adapter/types';
@@ -9,11 +9,16 @@ const payload: LookupPayload = {
   sentence: 'be into someone',
   clickedSpan: 'into',
   targetLang: 'en',
-  nativeLang: 'pt-BR',
+  nativeLang: 'pt',
 };
 
 describe('handleWordClick', () => {
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => {
+    localStorage.clear();
+    // No backend in tests: force the lookup to fall back deterministically.
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('no backend')));
+  });
+  afterEach(() => vi.unstubAllGlobals());
 
   it('pauses the video immediately and then renders the popup', async () => {
     const video = document.createElement('video');

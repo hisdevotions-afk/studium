@@ -41,4 +41,14 @@ describe('renderControls', () => {
     video.dispatchEvent(new Event('timeupdate'));
     expect(video.currentTime).toBe(12.3);
   });
+
+  it('reasserts the chosen speed when Netflix resets playbackRate', () => {
+    const { container, video } = setup();
+    (container.querySelector('.sla-copilot-speed') as HTMLElement).click(); // 1.25x
+    expect(video.playbackRate).toBe(1.25);
+    // Netflix drops it back to 1 and fires ratechange — we should reassert.
+    video.playbackRate = 1;
+    video.dispatchEvent(new Event('ratechange'));
+    expect(video.playbackRate).toBe(1.25);
+  });
 });

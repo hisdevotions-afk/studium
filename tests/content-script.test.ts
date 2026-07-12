@@ -45,8 +45,8 @@ describe('content-script wiring', () => {
   });
 
   it('mounts playback controls after attach', () => {
-    expect(document.querySelector('#sla-copilot-overlay .sla-copilot-speed')).not.toBeNull();
-    expect(document.querySelector('#sla-copilot-overlay .sla-copilot-repeat')).not.toBeNull();
+    expect(document.querySelector('#sla-copilot-controls .sla-copilot-speed')).not.toBeNull();
+    expect(document.querySelector('#sla-copilot-controls .sla-copilot-repeat')).not.toBeNull();
   });
 
   it('renders clean clickable tokens on cuechange and pauses + pops up on click', async () => {

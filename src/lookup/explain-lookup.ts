@@ -1,6 +1,8 @@
 import type { LookupPayload, Explanation } from '../adapter/types';
 
-const TIMEOUT_MS = 2500;
+// Headroom over the ~1.5s LLM round-trip; the "buscando…" popup covers the wait
+// and this only fires as a safety net if the backend truly hangs.
+const TIMEOUT_MS = 6000;
 // ponytail: local dev backend; point this at the deployed URL later.
 const LOOKUP_URL = 'http://localhost:8000/lookup';
 

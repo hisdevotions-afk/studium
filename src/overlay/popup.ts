@@ -5,13 +5,22 @@ export function renderPopup(
   payload: LookupPayload,
   explanation: Explanation,
   onResume: () => void,
-  onSave: () => Promise<void>
+  onSave: () => Promise<void>,
+  onClose: () => void = () => {}
 ): HTMLElement {
   container.innerHTML = '';
   const popup = document.createElement('div');
   popup.className = 'sla-copilot-popup';
   popup.style.cssText =
-    'display: inline-block; pointer-events: auto; background: rgba(0,0,0,0.9); color: #fff; padding: 12px 16px; border-radius: 8px; max-width: 60vw; text-align: left;';
+    'position: relative; display: inline-block; pointer-events: auto; background: rgba(0,0,0,0.9); color: #fff; padding: 12px 32px 12px 16px; border-radius: 8px; max-width: 60vw; text-align: left;';
+
+  const closeButton = document.createElement('button');
+  closeButton.className = 'sla-copilot-popup-close';
+  closeButton.style.cssText =
+    'position: absolute; top: 6px; right: 8px; cursor: pointer; pointer-events: auto; background: transparent; border: none; color: #fff; font-size: 16px; line-height: 1; padding: 0;';
+  closeButton.setAttribute('aria-label', 'fechar');
+  closeButton.textContent = '✕';
+  closeButton.addEventListener('click', onClose);
 
   const wordElem = document.createElement('div');
   wordElem.className = 'sla-copilot-popup-word';
@@ -40,7 +49,7 @@ export function renderPopup(
   resumeButton.textContent = 'continuar ▶';
   resumeButton.addEventListener('click', onResume);
 
-  popup.append(wordElem, explanationElem, saveButton, resumeButton);
+  popup.append(closeButton, wordElem, explanationElem, saveButton, resumeButton);
   container.appendChild(popup);
   return popup;
 }

@@ -26,7 +26,8 @@ export interface SelectedTracks {
   native: SubtitleTrack | null;
 }
 
-export type TargetLang = 'en' | 'it';
+export type TargetLang = 'en' | 'it' | 'es' | 'fr' | 'de';
+export type NativeLang = 'pt' | 'en' | 'es';
 
 export interface LookupPayload {
   videoId: number;
@@ -34,7 +35,7 @@ export interface LookupPayload {
   sentence: string;
   clickedSpan: string;
   targetLang: TargetLang;
-  nativeLang: 'pt-BR';
+  nativeLang: NativeLang;
 }
 
 export interface Explanation {

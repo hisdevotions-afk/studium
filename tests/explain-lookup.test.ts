@@ -8,7 +8,7 @@ const samplePayload: LookupPayload = {
   sentence: 'be into someone',
   clickedSpan: 'into',
   targetLang: 'en',
-  nativeLang: 'pt-BR',
+  nativeLang: 'pt',
 };
 
 describe('explainLookup', () => {
@@ -41,11 +41,11 @@ describe('explainLookup', () => {
     vi.unstubAllGlobals();
   });
 
-  it('falls back after 2.5s if the lookup hangs', async () => {
+  it('falls back after the timeout if the lookup hangs', async () => {
     vi.useFakeTimers();
     const never = () => new Promise<Explanation>(() => {});
     const pending = explainLookup(samplePayload, never);
-    await vi.advanceTimersByTimeAsync(2600);
+    await vi.advanceTimersByTimeAsync(6100);
     const result = await pending;
     expect(result.contextualExplanation).toBe('não consegui buscar isso agora.');
     vi.useRealTimers();

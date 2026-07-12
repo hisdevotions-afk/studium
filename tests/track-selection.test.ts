@@ -49,27 +49,35 @@ describe('extractUsableTracks', () => {
 });
 
 describe('selectTracks', () => {
-  it('prefers English over Italian when both are available', () => {
+  it('defaults to English target + Portuguese native', () => {
     const tracks = extractUsableTracks(fixture.textTracks as RawNetflixTrack[]);
     const selected = selectTracks(tracks);
     expect(selected.target?.language).toBe('en');
     expect(selected.native?.language).toBe('pt-BR');
   });
 
-  it('falls back to Italian when English is unavailable', () => {
-    const tracks = extractUsableTracks(fixture.textTracks as RawNetflixTrack[]).filter((t) => t.language !== 'en');
-    expect(selectTracks(tracks).target?.language).toBe('it');
+  it('picks the chosen study language by prefix', () => {
+    const tracks = extractUsableTracks(fixture.textTracks as RawNetflixTrack[]);
+    expect(selectTracks(tracks, 'it').target?.language).toBe('it');
   });
 
-  it('returns a null target when neither English nor Italian is available', () => {
+  it('returns a null target when the chosen study language is absent', () => {
     const tracks = extractUsableTracks(fixture.textTracks as RawNetflixTrack[]).filter(
-      (t) => t.language !== 'en' && t.language !== 'it'
+      (t) => t.language !== 'en'
     );
-    expect(selectTracks(tracks).target).toBeNull();
+    expect(selectTracks(tracks, 'en').target).toBeNull();
   });
 
-  it('returns a null native track when no Portuguese track is available', () => {
-    const tracks = extractUsableTracks(fixture.textTracks as RawNetflixTrack[]).filter((t) => t.language !== 'pt-BR');
-    expect(selectTracks(tracks).native).toBeNull();
+  it('matches the chosen native language by prefix', () => {
+    const tracks = extractUsableTracks(fixture.textTracks as RawNetflixTrack[]);
+    expect(selectTracks(tracks, 'en', 'pt').native?.language).toBe('pt-BR');
+    expect(selectTracks(tracks, 'en', 'en').native?.language).toBe('en');
+  });
+
+  it('returns a null native track when the chosen native language is absent', () => {
+    const tracks = extractUsableTracks(fixture.textTracks as RawNetflixTrack[]).filter(
+      (t) => t.language !== 'pt-BR'
+    );
+    expect(selectTracks(tracks, 'en', 'pt').native).toBeNull();
   });
 });

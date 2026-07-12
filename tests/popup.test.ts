@@ -8,7 +8,7 @@ const payload: LookupPayload = {
   sentence: 'be into someone',
   clickedSpan: 'into',
   targetLang: 'en',
-  nativeLang: 'pt-BR',
+  nativeLang: 'pt',
 };
 
 const explanation: Explanation = {
@@ -49,6 +49,16 @@ describe('renderPopup', () => {
     expect(btn.textContent).toBe('continuar ▶');
     btn.click();
     expect(onResume).toHaveBeenCalled();
+  });
+
+  it('renders a close button that fires onClose', () => {
+    const container = document.createElement('div');
+    const onClose = vi.fn();
+    renderPopup(container, payload, explanation, () => {}, () => Promise.resolve(), onClose);
+    const btn = container.querySelector('.sla-copilot-popup-close') as HTMLElement;
+    expect(btn).not.toBeNull();
+    btn.click();
+    expect(onClose).toHaveBeenCalled();
   });
 
   it('save button calls onSave and flips to salvo ✓', async () => {

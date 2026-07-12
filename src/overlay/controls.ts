@@ -15,11 +15,18 @@ export function renderControls(
   speedButton.className = 'sla-copilot-speed';
   speedButton.style.cssText = BTN_STYLE;
   let speedIdx = 0;
+  let desiredRate = 1;
   speedButton.textContent = `${SPEEDS[speedIdx]}x`;
-  speedButton.addEventListener('click', () => {
+  speedButton.addEventListener('click', (e) => {
+    e.stopPropagation(); // don't let Netflix's click-to-pause also fire
     speedIdx = (speedIdx + 1) % SPEEDS.length;
-    video.playbackRate = SPEEDS[speedIdx]!;
-    speedButton.textContent = `${SPEEDS[speedIdx]}x`;
+    desiredRate = SPEEDS[speedIdx]!;
+    video.playbackRate = desiredRate;
+    speedButton.textContent = `${desiredRate}x`;
+  });
+  // Netflix's player resets playbackRate to 1 on its own; reassert ours.
+  video.addEventListener('ratechange', () => {
+    if (video.playbackRate !== desiredRate) video.playbackRate = desiredRate;
   });
 
   const repeatButton = document.createElement('button');
@@ -27,7 +34,8 @@ export function renderControls(
   repeatButton.style.cssText = BTN_STYLE;
   repeatButton.textContent = 'repetir';
   let loop: { start: number; end: number } | null = null;
-  repeatButton.addEventListener('click', () => {
+  repeatButton.addEventListener('click', (e) => {
+    e.stopPropagation();
     loop = loop ? null : getCurrentCue();
     repeatButton.style.borderColor = loop ? '#e50914' : '#666';
   });
