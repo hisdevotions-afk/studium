@@ -5,6 +5,7 @@ import { renderOverlayLine } from '../overlay/overlay';
 import { renderControls } from '../overlay/controls';
 import { renderStatusMessage } from '../overlay/status-message';
 import { handleWordClick } from './orchestrate-word-click';
+import { isEnabled, ENABLED_KEY } from '../lookup/settings';
 import type { RawNetflixTrack, SubtitleTrack, TargetLang, LookupPayload } from '../adapter/types';
 
 const OVERLAY_CONTAINER_ID = 'sla-copilot-overlay';
@@ -49,6 +50,11 @@ interface Selection {
   targetLang: TargetLang;
 }
 
+// User's on/off toggle (toolbar popup). Synced from storage on load and kept
+// live via chrome.storage.onChanged so flipping the switch takes effect
+// immediately. Starts optimistically true so a fast player load isn't blocked
+// waiting on the async read; the init below corrects it if actually disabled.
+let enabled = true;
 let currentVideoId: number | null = null;
 let selection: Selection | null = null;
 let attachedVideo: HTMLVideoElement | null = null;
@@ -65,6 +71,18 @@ function clearTracks(): void {
   activeTrackElements = [];
 }
 
+// Full teardown: unhide Netflix's own subs and wipe our overlay/popup. Shared
+// by the leave-/watch poll branch and the disable toggle.
+function teardownOverlay(): void {
+  setNativeSubtitlesHidden(false);
+  if (attachedVideo) {
+    attachedVideo = null;
+    clearTracks();
+    document.getElementById(OVERLAY_CONTAINER_ID)?.replaceChildren();
+    document.getElementById(POPUP_CONTAINER_ID)?.replaceChildren();
+  }
+}
+
 // A tracks message tells us which subtitle files to use, but the <video>
 // element it needs may not exist yet (Netflix mounts it after DRM/session
 // negotiation) and can be torn down and recreated during a session. So we
@@ -72,6 +90,7 @@ function clearTracks(): void {
 // is currently live, re-attaching if Netflix swaps the element.
 function handleTracks(movieId: number, rawTracks: RawNetflixTrack[]): void {
   currentVideoId = movieId;
+  if (!enabled) return;
   const usable = extractUsableTracks(rawTracks);
   const { target, native } = selectTracks(usable);
 
@@ -111,6 +130,7 @@ function onWatchPage(): boolean {
 }
 
 async function tryAttach(): Promise<void> {
+  if (!enabled) return;
   // Only attach on the player page — /browse has hover-preview <video>s we
   // must never decorate.
   if (!onWatchPage()) return;
@@ -176,17 +196,26 @@ setInterval(() => {
     // unconditionally — attachedVideo may already be null (e.g. the title
     // had no usable track) while native subs are still hidden from an
     // earlier title.
-    setNativeSubtitlesHidden(false);
-    if (attachedVideo) {
-      attachedVideo = null;
-      clearTracks();
-      document.getElementById(OVERLAY_CONTAINER_ID)?.replaceChildren();
-      document.getElementById(POPUP_CONTAINER_ID)?.replaceChildren();
-    }
+    teardownOverlay();
     return;
   }
   void tryAttach();
 }, POLL_INTERVAL_MS);
+
+// Sync the on/off toggle from storage, then keep it live: flipping the switch
+// in the toolbar popup either tears the overlay down or re-attaches at once.
+void isEnabled().then((v) => {
+  enabled = v;
+  if (!enabled) teardownOverlay();
+});
+if (typeof chrome !== 'undefined' && chrome.storage?.onChanged) {
+  chrome.storage.onChanged.addListener((changes) => {
+    if (!(ENABLED_KEY in changes)) return;
+    enabled = changes[ENABLED_KEY]!.newValue !== false;
+    if (!enabled) teardownOverlay();
+    else void tryAttach();
+  });
+}
 
 window.addEventListener('message', (event) => {
   const message = parseBridgeMessage(event, window);

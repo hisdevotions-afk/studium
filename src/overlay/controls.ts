@@ -1,7 +1,8 @@
 const SPEEDS = [1, 1.25, 1.5, 0.75];
 const BTN_STYLE =
-  'cursor: pointer; pointer-events: auto; margin: 0 4px; padding: 2px 10px; ' +
-  'background: rgba(0,0,0,0.75); color: #fff; border: 1px solid #666; border-radius: 4px;';
+  'cursor: pointer; pointer-events: auto; margin: 0 6px; padding: 6px 16px; ' +
+  'font-size: 1.2vw; line-height: 1; ' +
+  'background: rgba(0,0,0,0.75); color: #fff; border: 1px solid #666; border-radius: 6px;';
 
 export function renderControls(
   container: HTMLElement,
