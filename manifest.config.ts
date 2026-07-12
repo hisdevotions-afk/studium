@@ -5,7 +5,7 @@ export default defineManifest({
   name: 'Studium',
   version: '0.1.0',
   description: 'Pause qualquer cena da Netflix, clique numa palavra, e receba uma explicação de verdade.',
-  host_permissions: ['https://*.nflxvideo.net/*'],
+  host_permissions: ['https://*.nflxvideo.net/*', 'http://localhost:8000/*'],
   permissions: ['storage'],
   action: {
     default_title: 'Studium',

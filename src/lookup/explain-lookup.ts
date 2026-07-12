@@ -1,6 +1,8 @@
 import type { LookupPayload, Explanation } from '../adapter/types';
 
 const TIMEOUT_MS = 2500;
+// ponytail: local dev backend; point this at the deployed URL later.
+const LOOKUP_URL = 'http://localhost:8000/lookup';
 
 // Flow 2.7: never block the UI on a slow backend.
 const FALLBACK: Explanation = {
@@ -10,15 +12,14 @@ const FALLBACK: Explanation = {
   morphologyNote: null,
 };
 
-// ponytail: stub until the backend exists; the payload contract and the
-// timeout behavior are the real deliverables here.
-function fetchExplanation(payload: LookupPayload): Promise<Explanation> {
-  return Promise.resolve({
-    translation: payload.clickedSpan,
-    contextualExplanation: `(stub) explicação de "${payload.clickedSpan}" ainda não conectada ao backend.`,
-    isIdiom: false,
-    morphologyNote: null,
+async function fetchExplanation(payload: LookupPayload): Promise<Explanation> {
+  const res = await fetch(LOOKUP_URL, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload),
   });
+  if (!res.ok) throw new Error(`lookup ${res.status}`);
+  return (await res.json()) as Explanation;
 }
 
 export function explainLookup(
