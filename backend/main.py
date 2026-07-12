@@ -17,11 +17,10 @@ from pydantic import BaseModel
 
 load_dotenv()
 
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-# Default is a free OpenRouter model so a zero-credit key works out of the box.
-# Free models are rate-limited (frequent 429s); for reliability add OpenRouter
-# credit and set OPENROUTER_MODEL to a paid model (e.g. anthropic/claude-3.5-haiku).
-MODEL = os.environ.get("OPENROUTER_MODEL", "tencent/hy3:free")
+LLM_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
+# NVIDIA NIM (OpenAI-compatible). 8b is fast (~1.5s) and good enough for short
+# glosses — big models on the free NIM endpoint often time out. Override via env.
+MODEL = os.environ.get("NVIDIA_MODEL", "meta/llama-3.1-8b-instruct")
 
 app = FastAPI(title="Studium lookup")
 # Local dev backend; the extension calls from a chrome-extension:// origin.
@@ -49,24 +48,32 @@ class Explanation(BaseModel):
     morphologyNote: str | None = None
 
 
-LANG_NAMES = {"en": "inglês", "it": "italiano"}
+LANG_NAMES = {"en": "inglês", "it": "italiano", "es": "espanhol", "fr": "francês", "de": "alemão"}
+NATIVE_NAMES = {
+    "pt": "português do Brasil",
+    "pt-BR": "português do Brasil",
+    "en": "English",
+    "es": "español",
+}
 
 SYSTEM = (
-    "Você é um tutor de idiomas para um falante nativo de português do Brasil. "
-    "Explique a palavra ou expressão que o usuário clicou, dentro do contexto da "
-    "frase da legenda. Responda SEMPRE em português do Brasil, de forma curta e "
-    "direta. Retorne SOMENTE um objeto JSON com as chaves: translation (tradução "
-    "curta no contexto), contextualExplanation (1-2 frases sobre o sentido aqui), "
-    "isIdiom (true se for gíria/expressão idiomática), morphologyNote (nota "
-    "gramatical breve ou null)."
+    "Você é um tutor de idiomas. Explique a palavra ou expressão que o usuário "
+    "clicou, dentro do contexto da frase da legenda. Responda SEMPRE no idioma "
+    "nativo do usuário, de forma curta e direta. Retorne SOMENTE um objeto JSON "
+    "com as chaves: translation (tradução curta no contexto), contextualExplanation "
+    "(1-2 frases sobre o sentido aqui), isIdiom (true se for gíria/expressão "
+    "idiomática), morphologyNote (nota gramatical breve ou null)."
 )
 
 
 def build_prompt(p: LookupPayload) -> str:
-    lang = LANG_NAMES.get(p.targetLang, p.targetLang)
+    target = LANG_NAMES.get(p.targetLang, p.targetLang)
+    native = NATIVE_NAMES.get(p.nativeLang, p.nativeLang)
     return (
-        f'Idioma-alvo: {lang}. Frase da legenda: "{p.sentence}". '
-        f'Palavra/trecho clicado: "{p.clickedSpan}".'
+        f'Idioma estudado: {target}. Frase da legenda: "{p.sentence}". '
+        f'Palavra/trecho clicado: "{p.clickedSpan}". '
+        f"REGRA OBRIGATÓRIA: escreva os valores de translation, contextualExplanation "
+        f"e morphologyNote inteiramente em {native} — nenhuma outra língua."
     )
 
 
@@ -79,19 +86,21 @@ def parse_json_object(content: str) -> dict:
 
 
 async def call_llm(payload: LookupPayload) -> Explanation:
-    api_key = os.environ.get("OPENROUTER_API_KEY")
+    api_key = os.environ.get("NVIDIA_API_KEY")
     if not api_key:
-        raise HTTPException(status_code=500, detail="OPENROUTER_API_KEY not set")
+        raise HTTPException(status_code=500, detail="NVIDIA_API_KEY not set")
     body = {
         "model": MODEL,
         "messages": [
             {"role": "system", "content": SYSTEM},
             {"role": "user", "content": build_prompt(payload)},
         ],
+        "temperature": 0.3,
+        "response_format": {"type": "json_object"},  # force valid JSON
     }
     async with httpx.AsyncClient(timeout=20) as client:
         resp = await client.post(
-            OPENROUTER_URL,
+            LLM_URL,
             headers={"Authorization": f"Bearer {api_key}"},
             json=body,
         )
