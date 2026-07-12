@@ -24,9 +24,11 @@ export function renderControls(
     video.playbackRate = desiredRate;
     speedButton.textContent = `${desiredRate}x`;
   });
-  // Netflix's player resets playbackRate to 1 on its own; reassert ours.
+  // Netflix's player resets playbackRate to 1 on its own; reassert ours — but
+  // only when the user actually picked a non-default speed, so we never fight
+  // Netflix's own rate handling at 1x.
   video.addEventListener('ratechange', () => {
-    if (video.playbackRate !== desiredRate) video.playbackRate = desiredRate;
+    if (desiredRate !== 1 && video.playbackRate !== desiredRate) video.playbackRate = desiredRate;
   });
 
   const repeatButton = document.createElement('button');

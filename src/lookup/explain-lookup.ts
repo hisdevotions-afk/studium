@@ -14,7 +14,21 @@ const FALLBACK: Explanation = {
   morphologyNote: null,
 };
 
+// In the real extension the fetch must run in the service worker (content-script
+// fetch to localhost is blocked by MV3 + Private Network Access), so message it.
+// Harness/tests have no chrome.runtime and fetch localhost directly.
 async function fetchExplanation(payload: LookupPayload): Promise<Explanation> {
+  if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+    return new Promise<Explanation>((resolve, reject) => {
+      chrome.runtime.sendMessage({ type: 'sla-copilot:lookup', payload }, (resp) => {
+        if (chrome.runtime.lastError || !resp?.ok) {
+          reject(new Error(resp?.error ?? chrome.runtime.lastError?.message ?? 'lookup failed'));
+        } else {
+          resolve(resp.data as Explanation);
+        }
+      });
+    });
+  }
   const res = await fetch(LOOKUP_URL, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },

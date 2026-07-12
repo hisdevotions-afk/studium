@@ -34,6 +34,24 @@ describe('explainLookup', () => {
     vi.unstubAllGlobals();
   });
 
+  it('routes through the background worker when chrome.runtime exists', async () => {
+    const data: Explanation = {
+      translation: 'a fim de',
+      contextualExplanation: 'via worker',
+      isIdiom: true,
+      morphologyNote: null,
+    };
+    const sendMessage = vi.fn((_msg: unknown, cb: (r: unknown) => void) => cb({ ok: true, data }));
+    vi.stubGlobal('chrome', { runtime: { sendMessage, lastError: undefined } });
+
+    const result = await explainLookup(samplePayload);
+
+    expect(sendMessage).toHaveBeenCalledOnce();
+    expect((sendMessage.mock.calls[0]![0] as { type: string }).type).toBe('sla-copilot:lookup');
+    expect(result).toEqual(data);
+    vi.unstubAllGlobals();
+  });
+
   it('falls back when the backend responds non-ok', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 502 }));
     const result = await explainLookup(samplePayload);

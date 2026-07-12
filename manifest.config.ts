@@ -7,6 +7,10 @@ export default defineManifest({
   description: 'Pause qualquer cena da Netflix, clique numa palavra, e receba uma explicação de verdade.',
   host_permissions: ['https://*.nflxvideo.net/*', 'http://localhost:8000/*'],
   permissions: ['storage'],
+  background: {
+    service_worker: 'src/background.ts',
+    type: 'module',
+  },
   action: {
     default_title: 'Studium',
     default_popup: 'src/popup/index.html',

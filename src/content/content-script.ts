@@ -37,16 +37,33 @@ const CONTAINER_STYLES: Record<string, string> = {
     'position: fixed; bottom: 16vh; left: 0; right: 0; z-index: 2147483647; text-align: center; pointer-events: none;',
 };
 
+// In fullscreen, only the fullscreened element's subtree renders, so a
+// body-level overlay vanishes. Parent our containers under the fullscreen
+// element while it's active (position: fixed then anchors to it).
+function overlayRoot(): HTMLElement {
+  return (document.fullscreenElement as HTMLElement) ?? document.body;
+}
+
 function ensureContainer(id: string): HTMLElement {
   let elem = document.getElementById(id);
   if (!elem) {
     elem = document.createElement('div');
     elem.id = id;
     elem.style.cssText = CONTAINER_STYLES[id] ?? '';
-    document.body.appendChild(elem);
   }
+  const root = overlayRoot();
+  if (elem.parentElement !== root) root.appendChild(elem);
   return elem;
 }
+
+// Netflix toggles fullscreen on its player div; move our overlay along with it.
+document.addEventListener('fullscreenchange', () => {
+  const root = overlayRoot();
+  for (const id of [OVERLAY_CONTAINER_ID, CONTROLS_CONTAINER_ID, POPUP_CONTAINER_ID]) {
+    const el = document.getElementById(id);
+    if (el && el.parentElement !== root) root.appendChild(el);
+  }
+});
 
 // Flow 1.6: our overlay replaces Netflix's subtitle renderer; both visible at
 // once is double text on screen.
