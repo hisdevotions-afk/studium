@@ -38,6 +38,27 @@ describe('injectWebvttProfile', () => {
     injectWebvttProfile(value);
     expect(value.profiles).toContain('webvtt-lssdh-ios8');
   });
+
+  it('does not overflow the call stack on a deeply (non-cyclically) nested object', () => {
+    // Real Netflix app-state objects can nest far deeper than any hand-written
+    // fixture (observed live: a RangeError from this exact recursive walk on
+    // a real title). Build a plain acyclic chain deep enough to blow a naive
+    // recursive walker, and confirm the deepest profiles array is still found.
+    const DEPTH = 50000;
+    const root: Record<string, unknown> = {};
+    let cursor = root;
+    for (let i = 0; i < DEPTH; i++) {
+      const next: Record<string, unknown> = {};
+      cursor.child = next;
+      cursor = next;
+    }
+    cursor.profiles = ['simplesdh'];
+
+    expect(() => injectWebvttProfile(root)).not.toThrow();
+    let found = root;
+    for (let i = 0; i < DEPTH; i++) found = found.child as Record<string, unknown>;
+    expect((found as unknown as { profiles: string[] }).profiles).toContain('webvtt-lssdh-ios8');
+  });
 });
 
 describe('extractManifestPayload', () => {
