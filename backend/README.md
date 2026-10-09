@@ -11,7 +11,7 @@ client contract in `src/adapter/types.ts`.
 cd backend
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env        # then put your OPENROUTER_API_KEY in .env
+cp .env.example .env        # then put your NVIDIA_API_KEY in .env
 uvicorn main:app --reload --port 8000
 ```
 
